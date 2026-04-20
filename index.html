@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Study Buddy · Complete Study Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/7.1.0/ionicons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: #ffffff; color: #000000; transition: background 0.2s, color 0.2s; min-height: 100vh; }
+    body.dark { background: #121212; color: #ffffff; }
+    #app { display: flex; flex-direction: column; height: 100vh; max-width: 600px; margin: 0 auto; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+    .app-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #ddd; background: inherit; z-index: 10; }
+    body.dark .app-header { border-bottom-color: #333; }
+    .menu-btn { background: none; border: none; font-size: 28px; cursor: pointer; margin-right: 16px; color: inherit; width: 40px; height: 40px; border-radius: 20px; }
+    .app-title { font-size: 20px; font-weight: 600; flex: 1; }
+    .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100%; background: #f5f5f5; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 1000; padding: 20px 0; }
+    body.dark .sidebar { background: #1e1e1e; }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 999; opacity: 0; visibility: hidden; transition: 0.2s; }
+    .sidebar-overlay.visible { opacity: 1; visibility: visible; }
+    .sidebar-header { padding: 16px 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
+    .sidebar-menu { list-style: none; }
+    .sidebar-menu li { padding: 14px 20px; font-size: 18px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+    .sidebar-menu li:hover { background: rgba(74, 144, 226, 0.15); }
+    .sidebar-menu li.active { background: #4a90e2; color: white; }
+    .main-content { flex: 1; overflow-y: auto; padding: 20px 16px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .timer-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 65vh; }
+    .timer-display { font-family: 'DM Mono', monospace; font-size: 5rem; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 0.08em; margin-bottom: 20px; text-align: center; background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%); background-clip: text; -webkit-background-clip: text; color: transparent; }
+    body.dark .timer-display { background: linear-gradient(135deg, #e0e0e0 0%, #ffffff 100%); background-clip: text; -webkit-background-clip: text; }
+    .time-input-block { width: 100%; max-width: 320px; margin: 10px 0 20px; text-align: center; }
+    .time-input-wrapper { display: flex; align-items: center; justify-content: center; gap: 10px; background: #f0f0f0; border-radius: 60px; padding: 8px 20px; }
+    body.dark .time-input-wrapper { background: #2a2a2a; }
+    .time-input-wrapper input { background: transparent; border: none; font-size: 1.8rem; width: 80px; text-align: center; font-weight: 500; color: inherit; outline: none; font-family: 'DM Mono', monospace; }
+    .quick-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+    .quick-btn, .subject-btn { background: transparent; border: 1px solid #ccc; padding: 8px 16px; border-radius: 30px; cursor: pointer; color: inherit; }
+    .btn { background: #4a90e2; border: none; color: white; padding: 12px 24px; border-radius: 40px; font-size: 16px; font-weight: 600; min-width: 100px; cursor: pointer; }
+    .btn.outline { background: transparent; border: 2px solid #ff3b30; color: #ff3b30; }
+    .btn.warning { background: #ff9800; color: white; }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 15px; }
+    .phase-tag { margin-top: 15px; font-size: 14px; opacity: 0.8; text-align: center; }
+    .subjects-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+    .subject-item { background: #f5f5f5; border-radius: 20px; padding: 16px; border: 1px solid #ddd; }
+    body.dark .subject-item { background: #1e1e1e; border-color: #444; }
+    .subject-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .subject-name { font-size: 18px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .subject-stats { font-size: 13px; opacity: 0.7; margin: 8px 0; }
+    .progress-bar { background: #ddd; border-radius: 20px; height: 10px; overflow: hidden; margin: 10px 0; }
+    .progress-fill { background: #4a90e2; width: 0%; height: 100%; }
+    .subject-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .small-btn { padding: 6px 12px; font-size: 13px; border-radius: 20px; background: #e0e0e0; border: none; cursor: pointer; }
+    body.dark .small-btn { background: #333; color: white; }
+    .delete-btn { background: #ff3b30; color: white; }
+    .add-subject-area { background: #f5f5f5; border-radius: 20px; padding: 16px; margin-top: 10px; }
+    body.dark .add-subject-area { background: #1e1e1e; }
+    .inline-input { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .inline-input input { flex: 1; padding: 10px; border-radius: 30px; border: 1px solid #ccc; background: inherit; color: inherit; }
+    .chapter-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ddd; }
+    .chapter-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; max-height: 150px; overflow-y: auto; }
+    .chapter-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 4px 8px; background: rgba(0,0,0,0.05); border-radius: 12px; }
+    body.dark .chapter-item { background: rgba(255,255,255,0.08); }
+    .add-chapter { display: flex; gap: 6px; margin-top: 8px; }
+    .add-chapter input { flex: 1; padding: 6px 10px; border-radius: 20px; border: 1px solid #ccc; background: inherit; font-size: 12px; }
+    .notes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .create-note-btn { background: #4a90e2; color: white; border: none; padding: 10px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; }
+    .notes-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .note-card { background: #f5f5f5; border-radius: 20px; padding: 16px; cursor: pointer; transition: all 0.2s; border: 1px solid #ddd; }
+    body.dark .note-card { background: #1e1e1e; border-color: #444; }
+    .note-card:hover { transform: translateX(4px); background: #e8e8e8; }
+    body.dark .note-card:hover { background: #2a2a2a; }
+    .note-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .note-preview { font-size: 13px; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .note-date { font-size: 11px; opacity: 0.5; margin-top: 8px; }
+    .delete-note-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #ff3b30; float: right; margin-top: -5px; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+    .page-btn { padding: 8px 14px; border-radius: 30px; background: #e0e0e0; border: none; cursor: pointer; }
+    body.dark .page-btn { background: #333; color: white; }
+    .page-btn.active { background: #4a90e2; color: white; }
+    .stats-grid { display: flex; gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #f5f5f5; padding: 15px; border-radius: 20px; flex: 1; text-align: center; }
+    body.dark .stat-card { background: #1e1e1e; }
+    .stat-value { font-size: 2rem; font-weight: 700; font-family: 'DM Mono', monospace; }
+    .chart-container { background: #f5f5f5; padding: 16px; border-radius: 20px; margin: 20px 0; }
+    body.dark .chart-container { background: #1e1e1e; }
+    .clear-btn { background: transparent; border: 1px solid #ff3b30; color: #ff3b30; padding: 12px; border-radius: 40px; width: 100%; cursor: pointer; margin-top: 10px; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #ddd; }
+    .switch { position: relative; display: inline-block; width: 52px; height: 28px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-round { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transition: .2s; }
+    .slider-round:before { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .2s; }
+    input:checked + .slider-round { background-color: #4a90e2; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; visibility: hidden; opacity: 0; transition: 0.2s; }
+    .modal.show { visibility: visible; opacity: 1; }
+    .modal-content { background: white; padding: 25px; border-radius: 28px; max-width: 320px; width: 90%; text-align: center; }
+    body.dark .modal-content { background: #1e1e1e; }
+    .label-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
+    .note-modal .modal-content { max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; text-align: left; }
+    .note-modal input, .note-modal textarea { width: 100%; padding: 12px; margin: 10px 0; border-radius: 16px; border: 1px solid #ccc; background: inherit; color: inherit; font-family: inherit; }
+    .note-modal textarea { min-height: 200px; resize: vertical; }
+    @media (max-width: 480px) { .timer-display { font-size: 3.5rem; } .time-input-wrapper input { font-size: 1.3rem; width: 65px; } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="app-header"><button class="menu-btn" id="menuToggle">☰</button><span class="app-title" id="pageTitle">Timer</span></div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="sidebar" id="sidebar"><div class="sidebar-header"><h3>Study Buddy</h3></div><ul class="sidebar-menu"><li data-page="timer" class="active"><ion-icon name="timer-outline"></ion-icon> Timer</li><li data-page="subjects"><ion-icon name="book-outline"></ion-icon> Subjects</li><li data-page="notes"><ion-icon name="document-text-outline"></ion-icon> Notes</li><li data-page="stats"><ion-icon name="stats-chart-outline"></ion-icon> Statistics</li><li data-page="settings"><ion-icon name="settings-outline"></ion-icon> Settings</li></ul></div>
+  <div class="main-content">
+    <div id="page-timer" class="page active"><div class="timer-container"><div class="timer-display" id="timerDisplay">00:00:00</div><div class="time-input-block" id="timeInputBlock"><div class="time-input-wrapper"><input type="number" id="hoursInput" min="0" max="23" value="0" placeholder="HH"><span>:</span><input type="number" id="minutesInput" min="0" max="59" value="25" placeholder="MM"></div><div class="quick-buttons"><button class="quick-btn" data-minutes="5">5m</button><button class="quick-btn" data-minutes="15">15m</button><button class="quick-btn" data-minutes="25">25m</button><button class="quick-btn" data-minutes="45">45m</button><button class="quick-btn" data-minutes="60">1h</button></div></div><div class="subject-selector"><button class="subject-btn" id="subjectSelectBtn">Subject: <span id="currentSubject">Math</span></button></div><div class="controls" id="timerControls"><button class="btn" id="startBtn">Start</button></div><div class="phase-tag" id="phaseIndicator"></div></div></div>
+    <div id="page-subjects" class="page"><h2 style="margin-bottom:16px;">📚 My Subjects</h2><div id="subjectsList" class="subjects-list"></div><div class="add-subject-area"><strong>➕ Add New Subject</strong><div class="inline-input"><input type="text" id="newSubjName" placeholder="Subject name"><input type="text" id="newUnitName" placeholder="Unit" value="chapters"><input type="number" id="newTotalUnits" placeholder="Total" value="10" min="1" style="width:80px"><button id="addSubjectBtn" class="small-btn" style="background:#4a90e2;color:white;">Add</button></div></div></div>
+    <div id="page-notes" class="page"><div class="notes-header"><h2>📝 My Notes</h2><button class="create-note-btn" id="createNoteBtn">+ New Note</button></div><div id="notesList"></div><div id="notesPagination" class="pagination"></div></div>
+    <div id="page-stats" class="page"><h2 style="margin-bottom:16px;">📊 Study Statistics</h2><div class="stats-grid"><div class="stat-card"><div class="stat-value" id="totalTime">0h 0m</div><div class="stat-label">Total studied</div></div><div class="stat-card"><div class="stat-value" id="totalSessions">0</div><div class="stat-label">Sessions</div></div></div><div class="stat-card"><div class="stat-value" id="todayTime">0m</div><div class="stat-label" id="todaySessionsLabel">0 sessions today</div></div><div class="chart-container"><canvas id="statsChart" width="400" height="200"></canvas></div><button class="clear-btn" id="clearHistoryBtn">Clear All History</button></div>
+    <div id="page-settings" class="page"><h2 style="margin-bottom:16px;">⚙️ Settings</h2><div class="setting-row"><span>Dark Mode</span><label class="switch"><input type="checkbox" id="darkModeToggle"><span class="slider-round"></span></label></div><div class="setting-row"><span>Sound Alerts</span><label class="switch"><input type="checkbox" id="soundToggle" checked><span class="slider-round"></span></label></div><div class="setting-row"><span>Volume</span><input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.7" style="width:120px;"></div><div class="setting-row"><span>Focus Lock Mode</span><label class="switch"><input type="checkbox" id="lockModeToggle"><span class="slider-round"></span></label></div><div class="lock-hint" style="font-size:12px;opacity:0.6;margin-top:8px;">When enabled, sidebar disabled while timer runs.</div></div>
+  </div>
+</div>
+<div class="modal" id="completionModal"><div class="modal-content"><div class="modal-title">🎉 Session Complete!</div><div class="modal-message" id="completionMsg">Great job!</div><button class="btn" id="closeModalBtn">Done</button></div></div>
+<div class="modal subject-modal" id="subjectModal"><div class="modal-content"><div class="modal-title">Select Subject</div><div id="subjectList"></div><input type="text" id="customSubjectInput" placeholder="Or type new subject"><button class="btn" id="closeSubjectModal">Close</button></div></div>
+<div class="modal note-modal" id="noteModal"><div class="modal-content"><div class="modal-title" id="noteModalTitle">New Note</div><input type="text" id="noteTitleInput" placeholder="Note title"><textarea id="noteContentInput" placeholder="Write your notes here..."></textarea><button class="btn" id="saveNoteBtn">Save Note</button><button class="btn outline" id="cancelNoteBtn" style="margin-top:10px;">Cancel</button></div></div>
+<div class="modal" id="viewNoteModal"><div class="modal-content"><div class="modal-title" id="viewNoteTitle"></div><div class="modal-message" id="viewNoteContent" style="text-align:left; white-space:pre-wrap;"></div><button class="btn" id="closeViewNoteBtn">Close</button></div></div>
+<audio id="alarmSound" preload="auto"><source src="data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YToAAACAgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f38="></audio>
+<audio id="beepSound" preload="auto"><source src="data:audio/wav;base64,UklGRjoAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTUAAACAgICAf39/f4CAgIB/f39/gICAgH9/f3+AgICAf39/fw=="></audio>
+<script>
+(function(){
+  let store = { subjects: [], sessions: [], notes: [], settings: { darkMode: false, soundEnabled: true, alarmVolume: 0.7, lockMode: false }, nextId: 1, nextNoteId: 1 };
+  const defaultSubjects = [
+    { id: 1, name: "Mathematics", unitName: "chapters", totalUnits: 12, completedUnits: 3, totalStudySeconds: 0, chapters: ["Algebra Basics", "Quadratic Equations", "Trigonometry Intro"], completedChapters: [] },
+    { id: 2, name: "Physics", unitName: "topics", totalUnits: 8, completedUnits: 2, totalStudySeconds: 0, chapters: ["Newton's Laws", "Thermodynamics"], completedChapters: [] },
+    { id: 3, name: "Chemistry", unitName: "chapters", totalUnits: 10, completedUnits: 1, totalStudySeconds: 0, chapters: ["Periodic Table", "Chemical Bonding"], completedChapters: [] },
+    { id: 4, name: "English", unitName: "lessons", totalUnits: 6, completedUnits: 0, totalStudySeconds: 0, chapters: ["Grammar Basics", "Essay Writing"], completedChapters: [] }
+  ];
+  const saved = localStorage.getItem('studyBuddyFinalV3');
+  if (saved) { try { let s = JSON.parse(saved); store.subjects = s.subjects || defaultSubjects; store.sessions = s.sessions || []; store.notes = s.notes || []; store.settings = { ...store.settings, ...s.settings }; store.nextId = s.nextId || 5; store.nextNoteId = s.nextNoteId || 1; } catch(e){} }
+  else { store.subjects = JSON.parse(JSON.stringify(defaultSubjects)); store.sessions = []; store.notes = []; store.nextId = 5; store.nextNoteId = 1; }
+  function saveStore(){ localStorage.setItem('studyBuddyFinalV3', JSON.stringify(store)); }
+  let timer = { duration: 1500, remaining: 1500, status: 'idle', targetEnd: null, selectedSubjectId: store.subjects[0]?.id || 1, intervalId: null };
+  let notesCurrentPage = 1; const notesPerPage = 5;
+  const body = document.body, menuToggle = document.getElementById('menuToggle'), sidebar = document.getElementById('sidebar'), overlay = document.getElementById('sidebarOverlay');
+  const pages = { timer: document.getElementById('page-timer'), subjects: document.getElementById('page-subjects'), notes: document.getElementById('page-notes'), stats: document.getElementById('page-stats'), settings: document.getElementById('page-settings') };
+  const pageTitle = document.getElementById('pageTitle'), menuItems = document.querySelectorAll('.sidebar-menu li');
+  const timerDisplay = document.getElementById('timerDisplay'), timeInputBlock = document.getElementById('timeInputBlock'), hoursInput = document.getElementById('hoursInput'), minutesInput = document.getElementById('minutesInput'), quickBtns = document.querySelectorAll('.quick-btn');
+  const subjectSelectBtn = document.getElementById('subjectSelectBtn'), currentSubjectSpan = document.getElementById('currentSubject'), timerControls = document.getElementById('timerControls'), phaseIndicator = document.getElementById('phaseIndicator');
+  const subjectsListDiv = document.getElementById('subjectsList'), addSubjectBtn = document.getElementById('addSubjectBtn'), newSubjName = document.getElementById('newSubjName'), newUnitName = document.getElementById('newUnitName'), newTotalUnits = document.getElementById('newTotalUnits');
+  const totalTimeEl = document.getElementById('totalTime'), totalSessionsEl = document.getElementById('totalSessions'), todayTimeEl = document.getElementById('todayTime'), todaySessionsLabel = document.getElementById('todaySessionsLabel'), chartCtx = document.getElementById('statsChart')?.getContext('2d');
+  let chart; const darkToggle = document.getElementById('darkModeToggle'), soundToggle = document.getElementById('soundToggle'), volumeSlider = document.getElementById('volumeSlider'), lockModeToggle = document.getElementById('lockModeToggle');
+  const completionModal = document.getElementById('completionModal'), closeModalBtn = document.getElementById('closeModalBtn'), subjectModal = document.getElementById('subjectModal'), subjectListDiv = document.getElementById('subjectList'), customSubjectInput = document.getElementById('customSubjectInput'), closeSubjectModal = document.getElementById('closeSubjectModal');
+  const alarmSound = document.getElementById('alarmSound'), beepSound = document.getElementById('beepSound');
+  const notesListDiv = document.getElementById('notesList'), notesPaginationDiv = document.getElementById('notesPagination'), createNoteBtn = document.getElementById('createNoteBtn');
+  const noteModal = document.getElementById('noteModal'), noteModalTitle = document.getElementById('noteModalTitle'), noteTitleInput = document.getElementById('noteTitleInput'), noteContentInput = document.getElementById('noteContentInput'), saveNoteBtn = document.getElementById('saveNoteBtn'), cancelNoteBtn = document.getElementById('cancelNoteBtn');
+  const viewNoteModal = document.getElementById('viewNoteModal'), viewNoteTitle = document.getElementById('viewNoteTitle'), viewNoteContent = document.getElementById('viewNoteContent'), closeViewNoteBtn = document.getElementById('closeViewNoteBtn');
+  let editingNoteId = null;
+  function playSound(s){ if(store.settings.soundEnabled){ s.volume = store.settings.alarmVolume; s.currentTime = 0; s.play().catch(e=>{}); } }
+  function formatTime(sec){ let h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60; return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+  function formatShort(sec){ let h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; }
+  function getSelectedSubject(){ return store.subjects.find(s => s.id === timer.selectedSubjectId) || store.subjects[0]; }
+  function updateSubjectButton(){ let sub = getSelectedSubject(); if(currentSubjectSpan) currentSubjectSpan.textContent = sub ? sub.name : 'None'; }
+  function renderSubjects(){
+    if(!subjectsListDiv) return;
+    subjectsListDiv.innerHTML = '';
+    store.subjects.forEach(sub => {
+      let percent = sub.totalUnits ? (sub.completedUnits / sub.totalUnits) * 100 : 0;
+      let studiedHrs = (sub.totalStudySeconds / 3600).toFixed(1);
+      let card = document.createElement('div'); card.className = 'subject-item';
+      card.innerHTML = `<div class="subject-header"><span class="subject-name">📖 ${escapeHtml(sub.name)}</span><span class="subject-stats">${studiedHrs} hrs studied</span></div><div class="subject-stats">${sub.unitName}: ${sub.completedUnits}/${sub.totalUnits} completed</div><div class="progress-bar"><div class="progress-fill" style="width:${percent}%;"></div></div><div class="subject-actions"><button class="small-btn inc-unit" data-id="${sub.id}">+1 ${sub.unitName}</button><button class="small-btn dec-unit" data-id="${sub.id}">-1 ${sub.unitName}</button><button class="small-btn set-unit" data-id="${sub.id}">✏️ Set</button><button class="small-btn delete-btn" data-id="${sub.id}">Delete</button></div><div class="chapter-section"><div style="font-size:12px; font-weight:500;">📑 Chapters/Topics</div><div class="chapter-list" id="chapters-${sub.id}"></div><div class="add-chapter"><input type="text" id="newChapter-${sub.id}" placeholder="Add new chapter"><button class="small-btn add-chapter-btn" data-id="${sub.id}">+ Add</button></div></div>`;
+      subjectsListDiv.appendChild(card);
+      let chapterList = card.querySelector(`#chapters-${sub.id}`);
+      if(chapterList){
+        let chapters = sub.chapters || [];
+        chapters.forEach((ch, idx) => {
+          let div = document.createElement('div'); div.className = 'chapter-item';
+          let isChecked = sub.completedChapters?.includes(ch) || false;
+          div.innerHTML = `<span><input type="checkbox" class="chapter-checkbox" data-sub="${sub.id}" data-chapter="${escapeHtml(ch)}" ${isChecked ? 'checked' : ''}> ${escapeHtml(ch)}</span><button class="small-btn del-chapter-btn" data-sub="${sub.id}" data-chapter="${escapeHtml(ch)}" style="background:#ff3b30; color:white; padding:2px 8px;">✖</button>`;
+          chapterList.appendChild(div);
+        });
+      }
+      card.querySelectorAll('.inc-unit').forEach(b => b.addEventListener('click', () => { let id = parseInt(b.dataset.id); let s = store.subjects.find(s => s.id === id); if(s && s.completedUnits < s.totalUnits){ s.completedUnits++; saveStore(); renderSubjects(); updateSubjectButton(); playSound(beepSound); } }));
+      card.querySelectorAll('.dec-unit').forEach(b => b.addEventListener('click', () => { let id = parseInt(b.dataset.id); let s = store.subjects.find(s => s.id === id); if(s && s.completedUnits > 0){ s.completedUnits--; saveStore(); renderSubjects(); updateSubjectButton(); playSound(beepSound); } }));
+      card.querySelectorAll('.set-unit').forEach(b => b.addEventListener('click', () => { let id = parseInt(b.dataset.id); let s = store.subjects.find(s => s.id === id); let val = prompt(`Completed ${s.unitName} (0-${s.totalUnits})`, s.completedUnits); if(val !== null){ let num = Math.min(s.totalUnits, Math.max(0, parseInt(val)||0)); s.completedUnits = num; saveStore(); renderSubjects(); updateSubjectButton(); } }));
+      card.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', () => { let id = parseInt(b.dataset.id); if(confirm('Delete subject?')){ store.subjects = store.subjects.filter(s => s.id !== id); if(timer.selectedSubjectId === id && store.subjects.length) timer.selectedSubjectId = store.subjects[0].id; saveStore(); renderSubjects(); updateSubjectButton(); updateStatsPage(); } }));
+      card.querySelectorAll('.add-chapter-btn').forEach(b => b.addEventListener('click', () => { let id = parseInt(b.dataset.id); let inp = document.getElementById(`newChapter-${id}`); let chap = inp.value.trim(); if(chap){ let subj = store.subjects.find(s => s.id === id); if(!subj.chapters) subj.chapters = []; if(!subj.completedChapters) subj.completedChapters = []; subj.chapters.push(chap); saveStore(); renderSubjects(); } }));
+      card.querySelectorAll('.chapter-checkbox').forEach(cb => cb.addEventListener('change', (e) => { let subId = parseInt(cb.dataset.sub); let chapName = cb.dataset.chapter; let sub = store.subjects.find(s => s.id === subId); if(!sub.completedChapters) sub.completedChapters = []; if(cb.checked){ if(!sub.completedChapters.includes(chapName)) sub.completedChapters.push(chapName); } else { sub.completedChapters = sub.completedChapters.filter(c => c !== chapName); } saveStore(); renderSubjects(); }));
+      card.querySelectorAll('.del-chapter-btn').forEach(db => db.addEventListener('click', () => { let subId = parseInt(db.dataset.sub); let chapName = db.dataset.chapter; let sub = store.subjects.find(s => s.id === subId); if(sub.chapters) sub.chapters = sub.chapters.filter(c => c !== chapName); if(sub.completedChapters) sub.completedChapters = sub.completedChapters.filter(c => c !== chapName); saveStore(); renderSubjects(); }));
+    });
+  }
+  function addSubject(){ let name = newSubjName.value.trim(); let unit = newUnitName.value.trim() || "chapters"; let total = parseInt(newTotalUnits.value) || 1; if(!name){ alert("Subject name required"); return; } store.subjects.push({ id: store.nextId++, name, unitName: unit, totalUnits: total, completedUnits: 0, totalStudySeconds: 0, chapters: [], completedChapters: [] }); saveStore(); renderSubjects(); updateSubjectButton(); newSubjName.value = ''; newUnitName.value = 'chapters'; newTotalUnits.value = '10'; playSound(beepSound); }
+  function renderNotes(){
+    if(!notesListDiv) return;
+    let start = (notesCurrentPage - 1) * notesPerPage;
+    let paginatedNotes = store.notes.slice().reverse().slice(start, start + notesPerPage);
+    notesListDiv.innerHTML = paginatedNotes.map(n => `<div class="note-card" data-id="${n.id}"><span class="delete-note-btn" data-id="${n.id}">🗑️</span><div class="note-title">📄 ${escapeHtml(n.title)}</div><div class="note-preview">${escapeHtml(n.content.substring(0,80))}${n.content.length>80?'...':''}</div><div class="note-date">${new Date(n.updatedAt).toLocaleDateString()}</div></div>`).join('');
+    document.querySelectorAll('.note-card').forEach(card => { card.addEventListener('click', (e) => { if(e.target.classList.contains('delete-note-btn')) return; let id = parseInt(card.dataset.id); let note = store.notes.find(n => n.id === id); if(note){ viewNoteTitle.textContent = note.title; viewNoteContent.textContent = note.content; viewNoteModal.classList.add('show'); } }); });
+    document.querySelectorAll('.delete-note-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); let id = parseInt(btn.dataset.id); if(confirm('Delete this note?')){ store.notes = store.notes.filter(n => n.id !== id); saveStore(); renderNotes(); renderPagination(); } }); });
+    renderPagination();
+  }
+  function renderPagination(){
+    if(!notesPaginationDiv) return;
+    let totalPages = Math.ceil(store.notes.length / notesPerPage);
+    if(totalPages <= 1){ notesPaginationDiv.innerHTML = ''; return; }
+    let html = '<button class="page-btn" id="prevPageBtn" ' + (notesCurrentPage === 1 ? 'disabled' : '') + '>◀ Prev</button>';
+    for(let i = 1; i <= totalPages; i++) html += `<button class="page-btn ${i === notesCurrentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    html += '<button class="page-btn" id="nextPageBtn" ' + (notesCurrentPage === totalPages ? 'disabled' : '') + '>Next ▶</button>';
+    notesPaginationDiv.innerHTML = html;
+    document.querySelectorAll('[data-page]').forEach(btn => btn.addEventListener('click', () => { notesCurrentPage = parseInt(btn.dataset.page); renderNotes(); }));
+    document.getElementById('prevPageBtn')?.addEventListener('click', () => { if(notesCurrentPage > 1){ notesCurrentPage--; renderNotes(); } });
+    document.getElementById('nextPageBtn')?.addEventListener('click', () => { if(notesCurrentPage < totalPages){ notesCurrentPage++; renderNotes(); } });
+  }
+  function openNoteModal(editId = null){ editingNoteId = editId; if(editId){ let note = store.notes.find(n => n.id === editId); if(note){ noteModalTitle.textContent = 'Edit Note'; noteTitleInput.value = note.title; noteContentInput.value = note.content; } } else { noteModalTitle.textContent = 'New Note'; noteTitleInput.value = ''; noteContentInput.value = ''; } noteModal.classList.add('show'); }
+  function saveNote(){ let title = noteTitleInput.value.trim(); let content = noteContentInput.value.trim(); if(!title){ alert('Please enter a title'); return; } if(editingNoteId){ let idx = store.notes.findIndex(n => n.id === editingNoteId); if(idx !== -1){ store.notes[idx].title = title; store.notes[idx].content = content; store.notes[idx].updatedAt = new Date().toISOString(); } } else { store.notes.push({ id: store.nextNoteId++, title, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); } saveStore(); noteModal.classList.remove('show'); renderNotes(); editingNoteId = null; }
+  createNoteBtn?.addEventListener('click', () => openNoteModal()); saveNoteBtn?.addEventListener('click', saveNote); cancelNoteBtn?.addEventListener('click', () => { noteModal.classList.remove('show'); editingNoteId = null; }); closeViewNoteBtn?.addEventListener('click', () => viewNoteModal.classList.remove('show'));
+  function renderTimerControls(){ let html = ''; if(timer.status === 'idle') html = '<button class="btn" id="startBtn">▶ Start</button>'; else if(timer.status === 'running') html = '<button class="btn" id="pauseBtn">⏸ Pause</button><button class="btn outline" id="resetBtn">⟳ Reset</button><button class="btn warning" id="endSessionBtn">🏁 End Session</button>'; else if(timer.status === 'paused') html = '<button class="btn" id="resumeBtn">▶ Resume</button><button class="btn outline" id="resetBtn">⟳ Reset</button><button class="btn warning" id="endSessionBtn">🏁 End Session</button>'; timerControls.innerHTML = html; document.getElementById('startBtn')?.addEventListener('click', startTimer); document.getElementById('pauseBtn')?.addEventListener('click', pauseTimer); document.getElementById('resumeBtn')?.addEventListener('click', resumeTimer); document.getElementById('resetBtn')?.addEventListener('click', resetTimer); document.getElementById('endSessionBtn')?.addEventListener('click', endSessionNow); }
+  function updateTimerUI(){ timerDisplay.textContent = formatTime(timer.remaining); if(timeInputBlock) timeInputBlock.style.display = timer.status === 'idle' ? 'block' : 'none'; renderTimerControls(); }
+  function startTimerLogic(){ if(timer.status === 'idle') timer.remaining = timer.duration; timer.targetEnd = Date.now() + timer.remaining * 1000; timer.status = 'running'; if(timer.intervalId) clearInterval(timer.intervalId); timer.intervalId = setInterval(tick, 200); updateTimerUI(); applyLockMode(); }
+  function startTimer(){ if(timer.status === 'idle') startTimerLogic(); }
+  function pauseTimer(){ if(timer.status === 'running'){ timer.status = 'paused'; clearInterval(timer.intervalId); updateTimerUI(); } }
+  function resumeTimer(){ if(timer.status === 'paused') startTimerLogic(); }
+  function resetTimer(){ clearInterval(timer.intervalId); timer.status = 'idle'; timer.targetEnd = null; timer.remaining = timer.duration; updateTimerUI(); applyLockMode(); }
+  function tick(){ if(timer.status === 'running' && timer.targetEnd){ let diff = Math.max(0, Math.ceil((timer.targetEnd - Date.now()) / 1000)); timer.remaining = diff; updateTimerUI(); if(diff === 0) completeTimer(); } }
+  function completeTimer(){ clearInterval(timer.intervalId); let studiedSec = timer.duration; let subject = getSelectedSubject(); if(subject) subject.totalStudySeconds += studiedSec; store.sessions.unshift({ id: Date.now(), subjectId: subject?.id, subjectName: subject?.name, duration: studiedSec, timestamp: new Date().toISOString() }); saveStore(); playSound(alarmSound); if(Notification.permission === 'granted') new Notification('Study Session Complete!', { body: `You studied ${formatShort(studiedSec)}!` }); completionMsg.textContent = `✨ You studied ${formatShort(studiedSec)}! ✨`; completionModal.classList.add('show'); timer.status = 'idle'; timer.remaining = timer.duration; updateTimerUI(); updateStatsPage(); renderSubjects(); applyLockMode(); }
+  function endSessionNow(){ if((timer.status === 'running' || timer.status === 'paused') && timer.remaining < timer.duration){ let studiedSec = timer.duration - timer.remaining; if(studiedSec > 0){ let subject = getSelectedSubject(); if(subject) subject.totalStudySeconds += studiedSec; store.sessions.unshift({ id: Date.now(), subjectId: subject?.id, subjectName: subject?.name, duration: studiedSec, timestamp: new Date().toISOString() }); saveStore(); playSound(beepSound); completionMsg.textContent = `⏹️ Session ended early! You studied ${formatShort(studiedSec)}.`; completionModal.classList.add('show'); } } clearInterval(timer.intervalId); timer.status = 'idle'; timer.remaining = timer.duration; updateTimerUI(); updateStatsPage(); renderSubjects(); applyLockMode(); }
+  function applyLockMode(){ let locked = store.settings.lockMode && timer.status === 'running'; menuToggle.disabled = locked; menuToggle.style.opacity = locked ? '0.4' : '1'; }
+  function getTotalSecondsFromInputs(){ return (parseInt(hoursInput?.value)||0)*3600 + (parseInt(minutesInput?.value)||0)*60; }
+  function setInputsFromSeconds(sec){ if(hoursInput && minutesInput){ hoursInput.value = Math.floor(sec/3600); minutesInput.value = Math.floor((sec%3600)/60); } }
+  function updateDurationFromInputs(){ if(timer.status === 'idle'){ let newDur = getTotalSecondsFromInputs(); if(newDur > 0){ timer.duration = newDur; timer.remaining = newDur; updateTimerUI(); } } }
+  function setQuickMinutes(minutes){ if(timer.status === 'idle'){ let sec = minutes * 60; timer.duration = sec; timer.remaining = sec; setInputsFromSeconds(sec); updateTimerUI(); } }
+  function updateStatsPage(){ if(!totalTimeEl) return; let totalSec = store.sessions.reduce((s, ss) => s + ss.duration, 0); totalTimeEl.textContent = formatShort(totalSec); totalSessionsEl.textContent = store.sessions.length; let todayStr = new Date().toDateString(); let todaySessions = store.sessions.filter(s => new Date(s.timestamp).toDateString() === todayStr); let todaySec = todaySessions.reduce((s, ss) => s + ss.duration, 0); todayTimeEl.textContent = formatShort(todaySec); todaySessionsLabel.textContent = `${todaySessions.length} session${todaySessions.length !== 1 ? 's' : ''} today`; let last7 = []; for(let i = 6; i >= 0; i--){ let d = new Date(); d.setDate(d.getDate() - i); last7.push(d.toDateString()); } let data = last7.map(dateStr => store.sessions.filter(s => new Date(s.timestamp).toDateString() === dateStr).reduce((sum, s) => sum + s.duration, 0)); let labels = last7.map(d => d.slice(0,5)); if(chart) chart.destroy(); if(chartCtx) chart = new Chart(chartCtx, { type: 'bar', data: { labels, datasets: [{ label: 'Minutes studied', data: data.map(s => Math.floor(s/60)), backgroundColor: '#4a90e2' }] }, options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true } } } }); }
+  function navigateTo(pageId){ Object.values(pages).forEach(p => p.classList.remove('active')); pages[pageId].classList.add('active'); pageTitle.textContent = pageId.charAt(0).toUpperCase() + pageId.slice(1); menuItems.forEach(item => item.classList.toggle('active', item.dataset.page === pageId)); sidebar.classList.remove('open'); overlay.classList.remove('visible'); if(pageId === 'subjects') renderSubjects(); if(pageId === 'notes') renderNotes(); if(pageId === 'stats') updateStatsPage(); }
+  menuItems.forEach(item => item.addEventListener('click', () => navigateTo(item.dataset.page)));
+  menuToggle.addEventListener('click', () => { if(!menuToggle.disabled){ sidebar.classList.add('open'); overlay.classList.add('visible'); } });
+  overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('visible'); });
+  if(hoursInput) hoursInput.addEventListener('input', updateDurationFromInputs);
+  if(minutesInput) minutesInput.addEventListener('input', updateDurationFromInputs);
+  quickBtns.forEach(btn => btn.addEventListener('click', () => { let mins = parseInt(btn.dataset.minutes); if(!isNaN(mins)) setQuickMinutes(mins); }));
+  subjectSelectBtn?.addEventListener('click', () => { subjectListDiv.innerHTML = store.subjects.map(s => `<div class="label-item" data-id="${s.id}">${s.name}</div>`).join(''); document.querySelectorAll('#subjectList .label-item').forEach(el => el.addEventListener('click', () => { timer.selectedSubjectId = parseInt(el.dataset.id); updateSubjectButton(); subjectModal.classList.remove('show'); playSound(beepSound); })); subjectModal.classList.add('show'); });
+  closeSubjectModal?.addEventListener('click', () => subjectModal.classList.remove('show'));
+  customSubjectInput?.addEventListener('keypress', (e) => { if(e.key === 'Enter' && customSubjectInput.value.trim()){ let newSub = customSubjectInput.value.trim(); if(!store.subjects.find(s => s.name === newSub)){ store.subjects.push({ id: store.nextId++, name: newSub, unitName: "chapters", totalUnits: 10, completedUnits: 0, totalStudySeconds: 0, chapters: [], completedChapters: [] }); saveStore(); renderSubjects(); updateSubjectButton(); } subjectModal.classList.remove('show'); customSubjectInput.value = ''; } });
+  addSubjectBtn?.addEventListener('click', addSubject);
+  closeModalBtn?.addEventListener('click', () => completionModal.classList.remove('show'));
+  document.getElementById('clearHistoryBtn')?.addEventListener('click', () => { if(confirm('Delete all study history?')){ store.sessions = []; saveStore(); updateStatsPage(); playSound(beepSound); } });
+  function loadSettings(){ if(darkToggle){ darkToggle.checked = store.settings.darkMode; soundToggle.checked = store.settings.soundEnabled; volumeSlider.value = store.settings.alarmVolume; lockModeToggle.checked = store.settings.lockMode; body.classList.toggle('dark', store.settings.darkMode); } }
+  function syncSettings(){ store.settings.darkMode = darkToggle.checked; store.settings.soundEnabled = soundToggle.checked; store.settings.alarmVolume = parseFloat(volumeSlider.value); store.settings.lockMode = lockModeToggle.checked; body.classList.toggle('dark', store.settings.darkMode); saveStore(); applyLockMode(); }
+  if(darkToggle){ darkToggle.addEventListener('change', syncSettings); soundToggle.addEventListener('change', syncSettings); volumeSlider.addEventListener('input', syncSettings); lockModeToggle.addEventListener('change', syncSettings); }
+  loadSettings(); timer.duration = 1500; timer.remaining = 1500; setInputsFromSeconds(1500); updateTimerUI(); updateSubjectButton(); renderSubjects(); renderNotes(); updateStatsPage(); if(Notification.permission === 'default') Notification.requestPermission();
+  document.addEventListener('visibilitychange', () => { if(!document.hidden && timer.status === 'running' && timer.targetEnd){ let diff = Math.max(0, Math.ceil((timer.targetEnd - Date.now()) / 1000)); timer.remaining = diff; updateTimerUI(); if(diff === 0) completeTimer(); } });
+  function escapeHtml(str){ return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[m]); }
+})();
+</script>
+</body>
+</html>
